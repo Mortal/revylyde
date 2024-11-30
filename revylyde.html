@@ -1,79 +1,241 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drag and Drop Audio Player</title>
-  <style>
-    #drop-zone {
-      width: 100%;
-      max-width: 400px;
-      height: 200px;
-      border: 2px dashed #007BFF;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      color: #555;
-      margin: 50px auto;
-      cursor: pointer;
-    }
-    #drop-zone.dragover {
-      border-color: #28a745;
-      color: #28a745;
-    }
-    #audio-container {
-      text-align: center;
-      margin-top: 20px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drag and Drop Audio Player</title>
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  margin: 40px 5%;
+  line-height: 1.4;
+}
+#drop-zone {
+  width: 100%;
+  max-width: 400px;
+  height: 200px;
+  border: 2px dashed #007BFF;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #555;
+  margin: 50px auto;
+  cursor: pointer;
+}
+#drop-zone.dragover {
+  border-color: #28a745;
+  color: #28a745;
+}
+#audio-container {
+  text-align: center;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.audiowidget {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+
+  &.stop {
+    width: 100%;
+    background: linear-gradient(0deg, hsl(0, 100%, 70%), hsl(0, 100%, 50%))
+  }
+
+  &[data-state=stopped] {
+    opacity: 0.8;
+  }
+
+  & > audio {
+    width: 50px;
+    height: 30px;
+  }
+  & > .filename {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
+  }
+  & > .key {
+    background: #00000080;
+    color: white;
+    padding: 3px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 16px;
+    min-width: 1em;
+    height: 1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+</style>
 </head>
 <body>
-  <div id="drop-zone">Drag and drop an audio file here</div>
-  <div id="audio-container"></div>
+<div id="drop-zone">Drag and drop an audio file here</div>
+<div id="stop" style="display: none" class="audiowidget stop">
+  <div class="filename">STOP</div>
+  <div class="key">Esc</div>
+</div>
+<div id="audio-container"></div>
 
-  <script>
-    const dropZone = document.getElementById('drop-zone');
-    const audioContainer = document.getElementById('audio-container');
+<script>
+const dropZone = document.getElementById('drop-zone');
+const audioContainer = document.getElementById('audio-container');
+/** @type HTMLAudioElement[] */
+const audioElements = [];
+/** @type HTMLAudioElement[] */
+const soloAudioElements = [];
+const keyToPlayFunction = {};
 
-    // Add dragover class when file is dragged over the drop zone
-    dropZone.addEventListener('dragover', (event) => {
-      event.preventDefault();
-      dropZone.classList.add('dragover');
-    });
+document.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  dropZone.classList.add('dragover');
+});
 
-    // Remove dragover class when file leaves the drop zone
-    dropZone.addEventListener('dragleave', () => {
-      dropZone.classList.remove('dragover');
-    });
+document.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragover');
+});
 
-    // Handle the drop event
-    dropZone.addEventListener('drop', (event) => {
-      event.preventDefault();
-      dropZone.classList.remove('dragover');
+document.addEventListener('drop', (event) => {
+  event.preventDefault();
+  dropZone.classList.remove('dragover');
+  dropZone.style.display = "none";
+  document.getElementById("stop").style.display = "";
 
-      for (const file of event.dataTransfer.files) {
-	if (!file.type.startsWith('audio/')) continue;
-        const blobURL = URL.createObjectURL(file);
+  for (const file of event.dataTransfer.files) {
+    if (!file.type.startsWith('audio/')) continue;
+    audioContainer.appendChild(makeAudioWidget(file));
+  }
+});
 
-        // Create an audio element
-	const div = document.createElement("div");
-	div.textContent = file.name;
-        const audioElement = document.createElement('audio');
-        audioElement.src = blobURL;
-        audioElement.controls = true;
+function makeAudioWidget(file) {
+  const audioWidget = document.createElement("div");
+  audioWidget.className = "audiowidget";
+  
+  /** @type HTMLAudioElement[] */
+  const myAudioElements = [];
+  const audioElement = document.createElement('audio');
+  myAudioElements.push(audioElement);
+  audioElements.push(audioElement);
+  audioElement.src = URL.createObjectURL(file);
 
-        audioElement.addEventListener('pause', () => {
-            // Rewind to the beginning when the audio is paused
-            audioElement.currentTime = 0;
-        });
-
-	div.appendChild(audioElement);
-        audioContainer.appendChild(div);
+  const onPause = () => {
+    // Rewind to beginning when pausing
+    audioElement.currentTime = 0;
+    updateDom();
+  };
+  const onPlay = () => {
+    if (mode === "solo") {
+      for (const other of soloAudioElements) {
+        if (other === audioElement) continue;
+        other.pause();
       }
-    });
-  </script>
+    }
+    updateDom();
+  };
+  audioElement.addEventListener('pause', onPause);
+  audioElement.addEventListener('play', onPlay);
+
+  const filename = document.createElement("div");
+  filename.className = "filename"
+  filename.textContent = file.name;
+  audioWidget.appendChild(filename);
+  const basename = file.name.split(".")[0];
+  const words = basename.split(" ");
+  
+  const playFunction = () => {
+    let i = 0;
+    if (mode === "multi") {
+      while (i < myAudioElements.length && !(myAudioElements[i].paused || myAudioElements[i].ended)) {
+        i += 1;
+      }
+      if (i === myAudioElements.length) {
+        const audioElement = document.createElement('audio');
+        myAudioElements.push(audioElement);
+        audioElements.push(audioElement);
+        audioElement.src = myAudioElements[0].src;
+        audioElement.addEventListener('pause', onPause);
+        audioElement.addEventListener('play', onPlay);
+      }
+    }
+    if (mode === "background" && !(myAudioElements[i].paused || myAudioElements[i].ended)) {
+      myAudioElements[i].pause();
+      return;
+    }
+    myAudioElements[i].currentTime = 0;
+    myAudioElements[i].play();
+  };
+
+  const key = document.createElement("div");
+  key.className = "key";
+  key.textContent = "-";
+  audioWidget.append(key);
+  if (/^[A-Z0-9]$/.exec(words[0])) {
+    key.textContent = words[0];
+    keyToPlayFunction[words[0]] = playFunction;
+  }
+
+  let mode = "solo";
+  if (words[1] === "m") mode = "multi";
+  else if (words[1] === "b") mode = "background";
+
+  if (mode === "solo") soloAudioElements.push(audioElement);
+
+  audioWidget.addEventListener("click", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    playFunction();
+  }, false);
+
+  const updateDom = () => {
+    if (myAudioElements.every(e => e.paused || e.ended)) {
+      audioWidget.setAttribute("data-state", "stopped");
+    } else {
+      audioWidget.setAttribute("data-state", "playing");
+    }
+  };
+
+  updateDom();
+
+  audioWidget.appendChild(audioElement);
+  
+  file.arrayBuffer().then(async (arrayBuffer) => {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const [a, b, c] = Array.from(new Uint8Array(hashBuffer.slice(0, 3)));
+    const angle = (a / 255) * 360;
+    const hue1 = b / 255 * 360;
+    const hue2 = c / 255 * 360;
+    audioWidget.style.background = `linear-gradient(${angle}deg, hsl(${hue1}, 100%, 70%), hsl(${hue2}, 100%, 50%))`;
+  })
+  return audioWidget;
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
+  if (e.key === "Escape") {
+    for (const audio of audioElements) {
+      audio.pause();
+    }
+    e.preventDefault();
+    return;
+  }
+  const playFunction = keyToPlayFunction[e.key.toUpperCase()];
+  if (playFunction != null) {
+    playFunction();
+    e.preventDefault();
+  }
+}, false);
+</script>
 </body>
 </html>
 
