@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Drag and Drop Audio Player</title>
+<title>Bring Your Own Soundboard</title>
 <style>
 body {
   font-family: system-ui, sans-serif;
@@ -13,17 +13,13 @@ body {
 }
 #drop-zone {
   width: 100%;
-  max-width: 400px;
-  height: 200px;
+  max-width: 700px;
+  padding: 80px 80px;
+  box-sizing: border-box;
   border: 2px dashed #007BFF;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
   color: #555;
   margin: 50px auto;
-  cursor: pointer;
 }
 #drop-zone.dragover {
   border-color: #28a745;
@@ -35,6 +31,7 @@ body {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  cursor: pointer;
 }
 
 .audiowidget {
@@ -81,7 +78,17 @@ body {
 </style>
 </head>
 <body>
-<div id="drop-zone">Drag and drop an audio file here</div>
+<div id="drop-zone">
+  <p>Drag and drop an audio file here to start your soundboard.</p>
+  <p>If the audio file starts with a capital letter and a space, e.g. "B buttonpress.wav",
+    then the sound can be played by pressing that letter on the keyboard.</p>
+  <p>By default, the sound starts over when you click it before it has finished,
+    but if the capital letter is followed by an "m", then multiple sounds can be played,
+    for example "K m whip.wav" for a whip sound that can be layered on top of itself.</p>
+  <p>By default, only one sound can play at a time, so starting one sound stops all other sounds,
+    but if the capital letter is followed by a "b", then the sound is a "background sound"
+    that isn't stopped when other sounds are played.</p>
+</div>
 <div id="stop" style="display: none" class="audiowidget stop">
   <div class="filename">STOP</div>
   <div class="key">Esc</div>
