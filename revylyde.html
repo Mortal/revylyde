@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drag and Drop Audio Player</title>
+  <style>
+    #drop-zone {
+      width: 100%;
+      max-width: 400px;
+      height: 200px;
+      border: 2px dashed #007BFF;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #555;
+      margin: 50px auto;
+      cursor: pointer;
+    }
+    #drop-zone.dragover {
+      border-color: #28a745;
+      color: #28a745;
+    }
+    #audio-container {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="drop-zone">Drag and drop an audio file here</div>
+  <div id="audio-container"></div>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const audioContainer = document.getElementById('audio-container');
+
+    // Add dragover class when file is dragged over the drop zone
+    dropZone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    // Remove dragover class when file leaves the drop zone
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    // Handle the drop event
+    dropZone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      dropZone.classList.remove('dragover');
+
+      for (const file of event.dataTransfer.files) {
+	if (!file.type.startsWith('audio/')) continue;
+        const blobURL = URL.createObjectURL(file);
+
+        // Create an audio element
+	const div = document.createElement("div");
+	div.textContent = file.name;
+        const audioElement = document.createElement('audio');
+        audioElement.src = blobURL;
+        audioElement.controls = true;
+
+        audioElement.addEventListener('pause', () => {
+            // Rewind to the beginning when the audio is paused
+            audioElement.currentTime = 0;
+        });
+
+	div.appendChild(audioElement);
+        audioContainer.appendChild(div);
+      }
+    });
+  </script>
+</body>
+</html>
+
