@@ -198,14 +198,21 @@ function makeAudioWidget(file) {
 
   if (mode === "solo") soloAudioElements.push(audioElement);
 
-  audioWidget.addEventListener("click", (ev) => {
+  audioWidget.addEventListener("touchstart", (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    playFunction();
+  }, false);
+
+  audioWidget.addEventListener("mousedown", (ev) => {
+    if (ev.which !== 1) return;
     ev.preventDefault();
     ev.stopPropagation();
     playFunction();
   }, false);
 
   const updateDom = () => {
-    if (myAudioElements.every(e => e.paused || e.ended)) {
+    if (myAudioElements.every(element => element.paused || element.ended)) {
       audioWidget.setAttribute("data-state", "stopped");
     } else {
       audioWidget.setAttribute("data-state", "playing");
@@ -227,26 +234,34 @@ function makeAudioWidget(file) {
   return audioWidget;
 }
 
-document.getElementById("stop").addEventListener("click", (e) => {
+document.getElementById("stop").addEventListener("touchstart", (ev) => {
   for (const audio of audioElements) {
     audio.pause();
   }
-  e.preventDefault();
+  ev.preventDefault();
 });
 
-document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
-  if (e.key === "Escape") {
+document.getElementById("stop").addEventListener("mousedown", (ev) => {
+  if (ev.which !== 1) return;
+  for (const audio of audioElements) {
+    audio.pause();
+  }
+  ev.preventDefault();
+});
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.ctrlKey || ev.altKey || ev.metaKey || ev.shiftKey) return;
+  if (ev.key === "Escape") {
     for (const audio of audioElements) {
       audio.pause();
     }
-    e.preventDefault();
+    ev.preventDefault();
     return;
   }
-  const playFunction = keyToPlayFunction[e.key.toUpperCase()];
+  const playFunction = keyToPlayFunction[ev.key.toUpperCase()];
   if (playFunction != null) {
     playFunction();
-    e.preventDefault();
+    ev.preventDefault();
   }
 }, false);
 </script>
