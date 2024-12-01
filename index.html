@@ -227,6 +227,13 @@ function makeAudioWidget(file) {
   return audioWidget;
 }
 
+document.getElementById("stop").addEventListener("click", (e) => {
+  for (const audio of audioElements) {
+    audio.pause();
+  }
+  e.preventDefault();
+});
+
 document.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
   if (e.key === "Escape") {
