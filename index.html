@@ -12,6 +12,7 @@ body {
   line-height: 1.4;
 }
 #drop-zone {
+  display: block;
   width: 100%;
   max-width: 700px;
   padding: 80px 80px;
@@ -26,11 +27,17 @@ body {
   color: #28a745;
 }
 #audio-container {
-  text-align: center;
   margin-top: 20px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
+  justify-content: center;
+}
+#toprow {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  height: 80px;
 }
 
 .audiowidget {
@@ -41,21 +48,38 @@ body {
   justify-content: center;
   align-items: center;
   cursor: pointer;
-
-  &.stop {
-    width: 100%;
-    background: linear-gradient(0deg, hsl(0, 100%, 70%), hsl(0, 100%, 50%))
-  }
+  transition: background-size 200ms ease;
+  background-image: linear-gradient(var(--angle), hsl(var(--hue1), 90%, 80%), hsl(var(--hue2), 90%, 60%));
+  background-size: 100% 100%;
+  background-position: center center;
 
   &[data-state=stopped] {
-    opacity: 0.8;
+    background-size: 400% 400%;
+    & > .filename {
+      background: transparent;
+    }
   }
 
-  & > audio {
-    width: 50px;
-    height: 30px;
+  &.add {
+    width: 150px;
+    height: 100%;
+    background: linear-gradient(0deg, hsl(0, 0%, 70%), hsl(0, 0%, 50%));
+    & > .filename {
+      background: transparent;
+    }
   }
+
+  &.stop {
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(0deg, hsl(0, 100%, 70%), hsl(0, 100%, 50%));
+    & > .filename {
+      background: transparent;
+    }
+  }
+
   & > .filename {
+    background: white;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -65,7 +89,7 @@ body {
     background: #00000080;
     color: white;
     padding: 3px;
-    font-family: 'Courier New', Courier, monospace;
+    font-family: "Courier New", Courier, monospace;
     font-size: 16px;
     min-width: 1em;
     height: 1em;
@@ -77,7 +101,7 @@ body {
 </style>
 </head>
 <body>
-<div id="drop-zone">
+<label id="drop-zone">
   <p>Drag and drop an audio file here to start your soundboard.</p>
   <p>If the audio file starts with a capital letter and a space, e.g. "B buttonpress.wav",
     then the sound can be played by pressing that letter on the keyboard.</p>
@@ -87,42 +111,56 @@ body {
   <p>By default, only one sound can play at a time, so starting one sound stops all other sounds,
     but if the capital letter is followed by a "b", then the sound is a "background sound"
     that isn't stopped when other sounds are played.</p>
-</div>
-<div id="stop" style="display: none" class="audiowidget stop">
-  <div class="filename">STOP</div>
-  <div class="key">Esc</div>
+  <input accept="audio/*" type="file" multiple style="position:absolute;top:-1000px;left:-1000px" onchange="addFiles(event, event.target.files)">
+</label>
+<div id="toprow" style="display: none">
+  <div class="audiowidget stop" id="stopbutton">
+    <div class="filename">STOP</div>
+    <div class="key">Esc</div>
+  </div>
+  <label class="audiowidget add" id="addbutton">
+    <div class="filename">Add sound</div>
+    <div class="key">-</div>
+    <input accept="audio/*" type="file" multiple style="position:absolute;top:-1000px;left:-1000px" onchange="addFiles(event, event.target.files)">
+  </label>
 </div>
 <div id="audio-container"></div>
 
 <script>
-const dropZone = document.getElementById('drop-zone');
-const audioContainer = document.getElementById('audio-container');
+const dropZone = document.getElementById("drop-zone");
+const toprow = document.getElementById("toprow");
+const audioContainer = document.getElementById("audio-container");
 /** @type HTMLAudioElement[] */
 const audioElements = [];
 /** @type HTMLAudioElement[] */
 const soloAudioElements = [];
 const keyToPlayFunction = {};
 
-document.addEventListener('dragover', (event) => {
+document.addEventListener("dragover", (event) => {
   event.preventDefault();
-  dropZone.classList.add('dragover');
+  dropZone.classList.add("dragover");
 });
 
-document.addEventListener('dragleave', () => {
-  dropZone.classList.remove('dragover');
+document.addEventListener("dragleave", () => {
+  dropZone.classList.remove("dragover");
 });
 
-document.addEventListener('drop', (event) => {
-  event.preventDefault();
-  dropZone.classList.remove('dragover');
+document.addEventListener("drop", (event) => {
+  addFiles(event, event.dataTransfer.files);
+});
+function addFiles(event, files) {
+  dropZone.classList.remove("dragover");
   dropZone.style.display = "none";
-  document.getElementById("stop").style.display = "";
+  toprow.style.display = "";
 
-  for (const file of event.dataTransfer.files) {
-    if (!file.type.startsWith('audio/')) continue;
+  let added = false;
+  for (const file of files) {
+    if (!file.type.startsWith("audio/")) continue;
+    added = true;
     audioContainer.appendChild(makeAudioWidget(file));
   }
-});
+  if (added) event.preventDefault();
+}
 
 function makeAudioWidget(file) {
   const audioWidget = document.createElement("div");
@@ -131,7 +169,7 @@ function makeAudioWidget(file) {
   
   /** @type HTMLAudioElement[] */
   const myAudioElements = [];
-  const audioElement = document.createElement('audio');
+  const audioElement = document.createElement("audio");
   myAudioElements.push(audioElement);
   audioElements.push(audioElement);
   audioElement.src = URL.createObjectURL(file);
@@ -150,8 +188,8 @@ function makeAudioWidget(file) {
     }
     updateDom();
   };
-  audioElement.addEventListener('pause', onPause);
-  audioElement.addEventListener('play', onPlay);
+  audioElement.addEventListener("pause", onPause);
+  audioElement.addEventListener("play", onPlay);
 
   const filename = document.createElement("div");
   filename.className = "filename"
@@ -167,12 +205,12 @@ function makeAudioWidget(file) {
         i += 1;
       }
       if (i === myAudioElements.length) {
-        const audioElement = document.createElement('audio');
+        const audioElement = document.createElement("audio");
         myAudioElements.push(audioElement);
         audioElements.push(audioElement);
         audioElement.src = myAudioElements[0].src;
-        audioElement.addEventListener('pause', onPause);
-        audioElement.addEventListener('play', onPlay);
+        audioElement.addEventListener("pause", onPause);
+        audioElement.addEventListener("play", onPlay);
       }
     }
     if (mode === "background" && !(myAudioElements[i].paused || myAudioElements[i].ended)) {
@@ -224,24 +262,26 @@ function makeAudioWidget(file) {
   audioWidget.appendChild(audioElement);
   
   file.arrayBuffer().then(async (arrayBuffer) => {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
     const [a, b, c] = Array.from(new Uint8Array(hashBuffer.slice(0, 3)));
     const angle = (a / 255) * 360;
     const hue1 = b / 255 * 360;
     const hue2 = c / 255 * 360;
-    audioWidget.style.background = `linear-gradient(${angle}deg, hsl(${hue1}, 100%, 70%), hsl(${hue2}, 100%, 50%))`;
+    audioWidget.style.setProperty("--angle", `${angle}deg`);
+    audioWidget.style.setProperty("--hue1", `${hue1}`);
+    audioWidget.style.setProperty("--hue2", `${hue2}`);
   })
   return audioWidget;
 }
 
-document.getElementById("stop").addEventListener("touchstart", (ev) => {
+document.getElementById("stopbutton").addEventListener("touchstart", (ev) => {
   for (const audio of audioElements) {
     audio.pause();
   }
   ev.preventDefault();
 });
 
-document.getElementById("stop").addEventListener("mousedown", (ev) => {
+document.getElementById("stopbutton").addEventListener("mousedown", (ev) => {
   if (ev.which !== 1) return;
   for (const audio of audioElements) {
     audio.pause();
